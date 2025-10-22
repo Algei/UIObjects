@@ -1,0 +1,166 @@
+local public = {}
+local private = {}
+
+local tweener : TweenService = game:GetService("TweenService")
+local debris : Debris = game:GetService("Debris")
+
+public.GaugeBar = {}
+public.QueueFrame = {}
+
+
+export type GaugeBar = {
+	MainFrame : ImageLabel,
+	BarBackground : ImageLabel,
+	Bar : ImageLabel,
+	isEnabled : boolean,
+	
+	MaxValue : number, 
+	value : number,
+	
+	Position : UDim2,
+	Size : UDim2,
+	
+	new : (self : GaugeBar, position : UDim2, Size : UDim2, MaxValue : number, value : number,offset : number) -> GaugeBar,
+	
+	update : (self : GaugeBar, value : number) -> boolean,
+	
+	enable : (self : GaugeBar) -> boolean,
+	
+	disable : (self : GaugeBar) -> boolean
+	
+	
+	
+}
+
+local gaugeframe = public.GaugeBar
+gaugeframe.__index = gaugeframe
+
+
+function gaugeframe:new(position : UDim2 , size : UDim2 , maxValue : number, value : number,offset : number)
+	
+	local new : GaugeBar = setmetatable({},self)
+	new.Size = size or UDim2.new()
+	new.Position = position or UDim2.new()
+	new.MaxValue = maxValue or 0
+	new.value = value or 0
+	new.isEnabled = true
+	offset = offset or 1
+	
+	local MainFrame : ImageLabel = Instance.new("ImageLabel")
+	MainFrame.Image = ""
+	
+	local barBackground : ImageLabel = Instance.new("ImageLabel",MainFrame)
+	barBackground.Image = ""
+	
+	local bar : ImageLabel = Instance.new("ImageLabel",barBackground)
+	bar.Image = ""
+	
+	new.MainFrame = MainFrame
+	new.BarBackground = barBackground
+	new.Bar = bar
+	
+	MainFrame.AnchorPoint = Vector2.new(0.5,0.5)
+	MainFrame.Position = position
+	MainFrame.Size = size
+	
+	barBackground.AnchorPoint = Vector2.new(0.5,0.5)
+	barBackground.Position = UDim2.new(0.5,0,0.5,0)
+	barBackground.Size = 
+		UDim2.new(offset , 0, offset , 0)
+	
+	bar.Size = 
+		UDim2.new(1,0,1,0)
+	
+	bar.Size = UDim2.new((new.value/new.MaxValue),0,1,0)
+
+	return new
+end
+
+function gaugeframe:update(value : number)
+	if self.isEnabled == true then
+		
+		
+		value = math.clamp(value,-math.huge,self.MaxValue)
+	
+	
+		local valueGap : number = math.abs((value - self.value)/self.MaxValue)
+		
+		
+		self.value = value
+		if self.tweenBar then
+			self.tweenBar:Cancel()
+			self.tweenBar = nil
+		end
+		
+		
+		local tweenInfo : TweenInfo = TweenInfo.new(1.5 * valueGap ,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,0,false,0)
+		local tween : Tween = tweener:Create(self.Bar,tweenInfo,{Size = UDim2.new((value/self.MaxValue),0,1,0)})
+		self.tweenBar = tween
+		tween:Play()
+		
+		
+		tween.Completed:Once(function()
+			self.tweenBar = nil
+		end)
+	
+	
+	end
+end
+
+
+function gaugeframe:enable() : boolean
+	self.isEnabled = true
+	
+end
+
+function gaugeframe:disable() : boolean
+	self.isEnabled = false
+
+end
+
+
+local queueFrame = public.QueueFrame
+queueFrame.__index = queueFrame
+
+export type QueueFrame = {
+	
+	MainFrame : Frame,
+	UIGrid : UIGridLayout,
+	
+	Size : UDim2,
+	Position : UDim2,
+	
+	new : (self : QueueFrame , size : UDim2 , position : UDim2, offset : number) -> QueueFrame,
+	
+	add : (self : QueueFrame,frame : Frame) -> boolean
+	
+}
+
+function queueFrame:new(size : UDim2 , position : UDim2, offset : number)
+	
+	local new : QueueFrame = setmetatable({},self)
+	new.Position = position or UDim2.new()
+	new.Size = size or UDim2.new()
+	offset = offset or 0.1
+	
+	new.MainFrame = Instance.new("Frame")
+	new.MainFrame.AnchorPoint = Vector2.new(0.5,0.5)
+	new.MainFrame.Position = position
+	new.MainFrame.Size = size
+	
+	new.UIGrid = Instance.new("UIGridLayout",new.MainFrame)
+	new.UIGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	new.UIGrid.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	new.UIGrid.CellSize = UDim2.new(1,0,offset,0)
+	
+	return new
+	
+end
+
+function queueFrame:add(frame : Frame,sec : number)
+	frame.Parent = self.MainFrame
+	sec = sec or 20
+	debris:AddItem(frame,sec)
+end
+
+return public
